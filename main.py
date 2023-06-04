@@ -2,6 +2,7 @@ from tkinter import *
 import pandas as pd
 from tkinter import ttk
 from tkinter import messagebox
+import random
 
 # ---------------------------- Constants  -------------------------- #
 SELECT_SCREEN_SIZE = "536x400"
@@ -22,13 +23,10 @@ language_2 = "none"
 
 next_screen_valid = False
 
+current_word = ""
 
-# ---------------------------- Collecting Selection ------------------------------- #
-# TODO: Grab language and change the flag and databases
 
 # ---------------------------- Database SETUP ------------------------------- #
-
-
 df = pd.read_csv('./words-database.csv')
 df.columns = ['Afrikaans', 'Arabic', 'Bulgarian', 'Bosnian', 'Catalan', 'Czech', 'Danish', 'German', 'Greek', 'English',
               'Esperanto', 'Spanish', 'Estonian', 'Basque', 'Persian', 'Finnish', 'French', 'Galician', 'Hebrew',
@@ -36,16 +34,36 @@ df.columns = ['Afrikaans', 'Arabic', 'Bulgarian', 'Bosnian', 'Catalan', 'Czech',
               'Kazakh', 'Korean', 'Italian', 'Latvian', 'Macedonian', 'Malay', 'Dutch', 'Norwegian', 'Polish',
               'Portuguese', 'Brazilian Portuguese', 'Romanian', 'Russian', 'Slovak', 'Slovenian', 'Albanian', 'Serbian',
               'Swedish', 'Thai', 'Tagalog', 'Turkish', 'Urdu', 'Vietnamese']
+
+
 # ---------------------------- Game Functionality ------------------------------- #
+def change_flashcard():
+    """Selects a random word from language_1 vocabulary and changes the card to it"""
+
+    global current_word, flip_timer
+    main_window.after_cancel(flip_timer)
+
+    current_word = random.choice(df[language_1].values)
+    canvas.itemconfig(card_title, text=language_1, fill="black")
+    canvas.itemconfig(card_word, text=current_word, fill="black")
+    canvas.itemconfig(card_background, image=front_image)
+    flip_timer = main_window.after(1500, flip_card)
+
+
+def flip_card():
+    """Shows the translation of the word into the selected language"""
+    canvas.itemconfig(card_title, text=language_2, fill="white")
+    translation_word = df[df[language_1] == current_word][language_2].values[0]
+    canvas.itemconfig(card_word, text=translation_word, fill="white")
+    canvas.itemconfig(card_background, image=back_image)
+
 
 # TODO: Setup buttons and functions
-# TODO: Use pandas inside of the functions
 # TODO: Flashcard reveal // add or remove from list of words with buttons
 
 # ---------------------------- Vocabulary Tracker  ------------------------------- #
 
 # TODO: Keep track of words learned inside a JSON file with "language" / "word" / "translation"
-# TODO: Create this for English only
 # TODO: Different commit: More languages and keeps track of words known. Restart option.
 
 
@@ -73,6 +91,7 @@ def append_text_1(*args):
     current_text = selection_canvas.itemcget(panel_text, "text")
     if current_text == "Select Languages":
         selection_canvas.itemconfig(panel_text, text=f"{option_var1.get()} to ")
+
     # Checking for existent text
     elif 'to' in current_text:
         try:
@@ -102,7 +121,7 @@ option_var2 = StringVar()
 
 # Object Menus Creation
 from_option_menu = ttk.OptionMenu(selection_screen, option_var1, 'Select', *sorted(LANGUAGES), command=append_text_1)
-to_option_menu = ttk.OptionMenu(selection_screen, option_var2, 'Select', *sorted(LANGUAGES), command=append_text_2)
+to_option_menu = ttk.OptionMenu(selection_screen, option_var2, 'Select', 'English', command=append_text_2)
 
 
 def close_selection():
@@ -148,27 +167,30 @@ selection_screen.mainloop()
 if next_screen_valid:  # If the languages were properly selected
 
     start_text = df[df['French'] == 'commencer'][language_1].values[0]
+    current_word = start_text
 
     # Main Root Setup
     main_window = Tk()
     main_window.title("Vocabulary Flashcard")
     main_window.config(padx=10, pady=30, bg=BG_COLOR)
 
+    flip_timer = main_window.after(5000, flip_card)
+
     # Creating Card Canvas with Image
     canvas = Canvas(width=448, height=330, highlightthickness=0, background=BG_COLOR)
-    image = PhotoImage(file="./images/card.png")
-    canvas.create_image(224, 165, image=image)
-    canvas.create_text(224, 95, text=language_1, font=("Arial", 14, "italic"))
-    canvas.create_text(224, 165, text=start_text.lower(), font=("Arial", 40, "normal"))
-
+    front_image = PhotoImage(file="./images/card.png")
+    back_image = PhotoImage(file="./images/flipped-card.png")
+    card_background = canvas.create_image(224, 165, image=front_image)
+    card_title = canvas.create_text(224, 95, text=language_1, font=("Arial", 14, "italic"))
+    card_word = canvas.create_text(224, 165, text=start_text.lower(), font=("Arial", 30, "normal"))
 
     # Buttons
     red_button_image = PhotoImage(file="./images/button-red.png")
     red_button = Button(padx=0, pady=0, image=red_button_image, highlightthickness=0, background=BG_COLOR, bd=0,
-                        activebackground=BG_COLOR)
+                        activebackground=BG_COLOR, command=change_flashcard)
     green_button_image = PhotoImage(file="./images/button-green.png")
     green_button = Button(padx=0, pady=0, image=green_button_image, highlightthickness=0, background=BG_COLOR, bd=0,
-                          activebackground=BG_COLOR)
+                          activebackground=BG_COLOR, command=change_flashcard)
 
     # Flag Icons
     flag_left_image = PhotoImage(file="./images/empty-flag.png")
